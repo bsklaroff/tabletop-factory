@@ -1,0 +1,82 @@
+.play {
+  display: flex;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.play-main {
+  flex: 1;
+  overflow: auto;
+  padding: 2rem;
+  margin-right: 300px; /* Match sidebar width */
+}
+
+.play-sidebar {
+  position: fixed;
+  right: 0;
+  top: 0;
+  height: 100vh;
+  width: 300px;
+  background: rgba(255, 255, 255, 0.1);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.sidebar-section {
+  margin-bottom: 2rem;
+}
+
+.sidebar-section h3 {
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 1.1rem;
+}
+
+.player-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.player-list li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.game-status p {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.start-game-button {
+  margin: 1rem 0;
+  padding: 0.8em 1.6em;
+  font-size: 1.1em;
+}
+
+.start-game-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.start-game-button:disabled:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.new-game-button {
+  margin: 2rem 0;
+  padding: 0.8em 1.6em;
+  font-size: 1.1em;
+  background-color: #646cff;
+  border-color: #646cff;
+}
+
+.new-game-button:hover {
+  background-color: #747bff;
+  border-color: #747bff;
+}
