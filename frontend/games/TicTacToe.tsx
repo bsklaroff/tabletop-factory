@@ -4,9 +4,10 @@ import './TicTacToe.css'
 interface TicTacToeProps {
   fsm: TicTacToeFSM | null
   takeAction: (action: TicTacToeAction) => void
+  replayMode: boolean
 }
 
-function TicTacToe({ fsm, takeAction }: TicTacToeProps) {
+function TicTacToe({ fsm, takeAction, replayMode }: TicTacToeProps) {
   if (!fsm) return null
 
   const playerId = localStorage.getItem('playerId')
@@ -21,7 +22,10 @@ function TicTacToe({ fsm, takeAction }: TicTacToeProps) {
       row,
       col,
     }
-    if (validMoves.some(move => move.row === row && move.col === col)) {
+    if (validMoves.some(move => (
+      move.row === row && 
+      move.col === col
+    ))) {
       takeAction(action)
     }
   }
@@ -52,7 +56,7 @@ function TicTacToe({ fsm, takeAction }: TicTacToeProps) {
                 key={`${rowIndex}-${colIndex}`}
                 className={getCellClass(rowIndex, colIndex)}
                 onClick={() => handleCellClick(rowIndex, colIndex)}
-                disabled={!isCurrentPlayer || fsm.state.winner !== null}
+                disabled={replayMode || !isCurrentPlayer || fsm.state.winner !== null}
               >
                 {getCellContent(cell)}
               </button>

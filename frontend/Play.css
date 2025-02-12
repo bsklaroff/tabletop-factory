@@ -1,6 +1,6 @@
 .play {
   display: flex;
-  height: 100%;
+  height: 100vh;
   margin: 0;
   padding: 0;
   overflow: hidden;
@@ -10,13 +10,10 @@
   flex: 1;
   overflow: auto;
   padding: 2rem;
-  margin-right: 300px; /* Match sidebar width */
 }
 
 .play-sidebar {
-  position: fixed;
-  right: 0;
-  top: 0;
+  flex: 0 0 300px;
   height: 100vh;
   width: 300px;
   background: rgba(255, 255, 255, 0.1);
@@ -51,6 +48,50 @@
   margin: 0.5rem 0;
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.8);
+  transition: background-color 0.2s;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.game-status p:not(.selected):hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+}
+
+.game-status p.selected {
+  background-color: rgba(100, 108, 255, 0.3);
+  cursor: default;
+}
+
+.game-replay {
+  background: #1a1a1a;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+}
+
+.close-button {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  transition: color 0.2s;
+}
+
+.close-button:hover {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .start-game-button {
@@ -79,4 +120,10 @@
 .new-game-button:hover {
   background-color: #747bff;
   border-color: #747bff;
+}
+
+.game-status-message {
+  text-align: center;
+  margin-top: 1rem;
+  color: rgba(255, 255, 255, 0.8);
 }

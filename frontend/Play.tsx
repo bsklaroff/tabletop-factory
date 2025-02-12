@@ -11,6 +11,7 @@ import { GameState, GameAction, GameInfo, allGameInfo } from '@shared/game-info.
 interface GameJSXProps {
   fsm: GameFSM<GameState, GameAction> | null
   takeAction: (action: GameAction) => void
+  replayMode: boolean
 }
 const gameJSXMap = new Map<string, (p: GameJSXProps) => JSX.Element>()
 const gameInfoEntries = Array.from(allGameInfo.entries())
@@ -26,6 +27,7 @@ function Play() {
   const [players, setPlayers] = useState<Player[]>([])
   const [gameInfo, setGameInfo] = useState<GameInfo | null>(null)
   const [gameFSM, setGameFSM] = useState<GameFSM<GameState, GameAction> | null>(null)
+  const [replayIdx, setReplayIdx] = useState<number | null>(null)
   const socketRef = useRef<Socket | null>(null)
 
   useEffect(() => {
@@ -79,7 +81,7 @@ function Play() {
 
 
   let gameContent = null
-  if (gameInfo !== null) {
+  if (gameInfo) {
     const GameJSX = gameJSXMap.get(gameInfo.name)!
     const takeAction = (action: GameAction) => {
       socketRef.current?.emit('game:action', {
@@ -87,7 +89,22 @@ function Play() {
         gameAction: action,
       })
     }
-    gameContent = <GameJSX fsm={gameFSM} takeAction={takeAction} />
+    gameContent = <GameJSX fsm={gameFSM} takeAction={takeAction} replayMode={false} />
+  }
+
+  let gameReplay = null
+  if (gameInfo && gameFSM && replayIdx !== null) {
+    const GameJSX = gameJSXMap.get(gameInfo.name)!
+    const replayFSM = new gameInfo.FSMClass(gameFSM.toData())
+    replayFSM.rewindTo(replayIdx)
+    gameReplay = (
+      <div className="modal-overlay" onClick={() => setReplayIdx(null)}>
+        <div className="game-replay" onClick={e => e.stopPropagation()}>
+          <button className="close-button" onClick={() => setReplayIdx(null)}>×</button>
+          <GameJSX fsm={replayFSM} takeAction={() => {}} replayMode={true} />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -111,11 +128,18 @@ function Play() {
           </>
         )}
         {gameContent}
+        {gameFSM?.state.winner === null && (
+          <div className="game-status-message">
+            {gameFSM.players.findIndex(p => p.id === localStorage.getItem('playerId')) !== gameFSM.state.currentPlayer && (
+              <>Waiting for {gameFSM.players[gameFSM.state.currentPlayer].name}...</>
+            )}
+          </div>
+        )}
         {gameFSM?.hasEnded() && (
           <button
             onClick={() => {
               // Rotate players array from previous array by one player, so
-              // e.g. player will switch sides in a two-player game
+              // for example players will switch sides in a two-player game
               const newPlayers = structuredClone(gameFSM.players)
               newPlayers.unshift(newPlayers.pop()!)
               socketRef.current?.emit('game:start', {
@@ -128,6 +152,7 @@ function Play() {
             New Game
           </button>
         )}
+        {gameReplay}
       </div>
       <div className="play-sidebar">
         <div className="sidebar-section">
@@ -140,10 +165,21 @@ function Play() {
         </div>
         {gameFSM && (
           <div className="sidebar-section">
-            <h3>Game Status</h3>
+            <h3>Game History</h3>
             <div className="game-status">
-              {gameFSM.displayStrings.map((str, index) => (
-                <p key={index}>{str}</p>
+              {gameFSM.historyDisplay.map((str, idx) => str && (
+                  <p
+                    key={idx}
+                    onClick={() => replayIdx !== idx && setReplayIdx(idx)}
+                    className={replayIdx === idx ? 'selected' : ''}
+                  >
+                    {str.split('\n').map((line, i) => (
+                      <span key={i}>
+                        {line}
+                        {i < str.split('\n').length - 1 && <br />}
+                      </span>
+                    ))}
+                  </p>
               ))}
             </div>
           </div>

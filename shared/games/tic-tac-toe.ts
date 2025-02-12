@@ -47,7 +47,9 @@ export class TicTacToeFSM extends GameFSM<TicTacToeState, TicTacToeAction> {
       }
     }
 
-    this.state.currentPlayer = this.state.currentPlayer === 0 ? 1 : 0
+    if (!this.hasEnded()) {
+      this.state.currentPlayer = this.state.currentPlayer === 0 ? 1 : 0
+    }
     this.actionHistory.push(action)
     return true
   }
