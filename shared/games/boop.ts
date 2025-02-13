@@ -19,7 +19,7 @@ export interface BoopState {
   needsPieceRemoval: boolean
 }
 
-export type PlacePieceAction = {
+export interface PlacePieceAction {
   type: 'place'
   player: PlayerNumber
   row: number
@@ -27,13 +27,13 @@ export type PlacePieceAction = {
   pieceType: PieceType
 }
 
-export type SelectGraduationAction = {
+export interface SelectGraduationAction {
   type: 'select-graduation'
   player: PlayerNumber
   positions: [number, number][]
 }
 
-export type RemovePieceAction = {
+export interface RemovePieceAction {
   type: 'remove-piece'
   player: PlayerNumber
   row: number
@@ -44,6 +44,12 @@ export type BoopAction =
   | PlacePieceAction
   | SelectGraduationAction
   | RemovePieceAction
+
+interface BoopResult {
+  oldPosition: [number, number]
+  newPosition: [number, number] | null
+  boopDirection: [number, number]
+}
 
 
 export class BoopFSM extends GameFSM<BoopState, BoopAction> {
@@ -144,25 +150,30 @@ export class BoopFSM extends GameFSM<BoopState, BoopAction> {
     }
   }
 
-  private isValidPosition(row: number, col: number): boolean {
+  public static isValidPosition(row: number, col: number): boolean {
     return row >= 0 && row < 6 && col >= 0 && col < 6
   }
 
-  private getBoopDirection(fromRow: number, fromCol: number, toRow: number, toCol: number): [number, number] {
+  public static getBoopDirection(fromRow: number, fromCol: number, toRow: number, toCol: number): [number, number] {
     return [
       Math.sign(toRow - fromRow),
       Math.sign(toCol - fromCol),
     ]
   }
 
-  private canBoop(booper: Cell, boopee: Cell): boolean {
+  public static canBoop(booper: Cell, boopee: Cell): boolean {
     if (!booper.type || !boopee.type) return false
     if (booper.type === 'cat') return true
     return boopee.type === 'kitten'
   }
 
-  private performBoops(row: number, col: number): void {
-    const placedPiece = this.state.board[row][col]
+  public static calculateBoops(
+    board: Cell[][],
+    placedRow: number,
+    placedCol: number,
+    placedPiece: Cell,
+  ): BoopResult[] {
+    const results = []
     const directions = [
       [-1,-1], [-1,0], [-1,1],
       [0,-1],          [0,1],
@@ -170,30 +181,62 @@ export class BoopFSM extends GameFSM<BoopState, BoopAction> {
     ]
 
     for (const [dRow, dCol] of directions) {
-      const targetRow = row + dRow
-      const targetCol = col + dCol
+      const targetRow = placedRow + dRow
+      const targetCol = placedCol + dCol
+
       if (!this.isValidPosition(targetRow, targetCol)) continue
-      const targetPiece = this.state.board[targetRow][targetCol]
+
+      const targetPiece = board[targetRow][targetCol]
       if (!this.canBoop(placedPiece, targetPiece)) continue
 
-      const [boopDRow, boopDCol] = this.getBoopDirection(row, col, targetRow, targetCol)
-      const newRow = targetRow + boopDRow
-      const newCol = targetCol + boopDCol
+      const boopDirection = this.getBoopDirection(placedRow, placedCol, targetRow, targetCol)
+      const newRow = targetRow + boopDirection[0]
+      const newCol = targetCol + boopDirection[1]
 
-      // If the piece is booped off the board, return the piece to owner's pool
       if (!this.isValidPosition(newRow, newCol)) {
-        const owner = targetPiece.player as PlayerNumber
-        if (targetPiece.type === 'cat') {
+        results.push({
+          oldPosition: [targetRow, targetCol],
+          newPosition: null,
+          boopDirection,
+        } as BoopResult)
+      } else if (!board[newRow][newCol].type) {
+        results.push({
+          oldPosition: [targetRow, targetCol],
+          newPosition: [newRow, newCol],
+          boopDirection,
+        } as BoopResult)
+      }
+    }
+
+    return results
+  }
+
+  private performBoops(row: number, col: number): void {
+    const boopResults = BoopFSM.calculateBoops(
+      this.state.board,
+      row,
+      col,
+      this.state.board[row][col],
+    )
+
+    for (const { oldPosition, newPosition } of boopResults) {
+      const [oldRow, oldCol] = oldPosition
+      const oldPiece = this.state.board[oldRow][oldCol]
+
+      if (newPosition === null) {
+        // Piece booped off board
+        const owner = oldPiece.player as PlayerNumber
+        if (oldPiece.type === 'cat') {
           this.state.playerPieces[owner].cats++
         } else {
           this.state.playerPieces[owner].kittens++
         }
-        this.state.board[targetRow][targetCol] = { player: null, type: null }
-
-      // If there is not another piece already in the new space, move the piece
-      } else if (!this.state.board[newRow][newCol].type) {
-        this.state.board[newRow][newCol] = this.state.board[targetRow][targetCol]
-        this.state.board[targetRow][targetCol] = { player: null, type: null }
+        this.state.board[oldRow][oldCol] = { player: null, type: null }
+      } else {
+        // Move piece to new position
+        const [newRow, newCol] = newPosition
+        this.state.board[newRow][newCol] = this.state.board[oldRow][oldCol]
+        this.state.board[oldRow][oldCol] = { player: null, type: null }
       }
     }
   }
@@ -215,7 +258,7 @@ export class BoopFSM extends GameFSM<BoopState, BoopAction> {
         for (const [d1, d2] of directions) {
           const pos1: [number, number] = [row + d1[0], col + d1[1]]
           const pos2: [number, number] = [row + d2[0], col + d2[1]]
-          if (!this.isValidPosition(pos1[0], pos1[1]) || !this.isValidPosition(pos2[0], pos2[1])) continue
+          if (!BoopFSM.isValidPosition(pos1[0], pos1[1]) || !BoopFSM.isValidPosition(pos2[0], pos2[1])) continue
           const piece1 = this.state.board[pos1[0]][pos1[1]]
           const piece2 = this.state.board[pos2[0]][pos2[1]]
 

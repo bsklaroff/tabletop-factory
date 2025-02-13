@@ -52,7 +52,7 @@ export abstract class GameFSM<S, A> {
     }
   }
 
-  rewindTo(actionIdx: number) {
+  rewindTo(actionIdx: number): void {
     const actionsToReplay = this.actionHistory.slice(0, actionIdx + 1)
     this.state = structuredClone(this.initState)
     this.actionHistory = []
@@ -60,6 +60,15 @@ export abstract class GameFSM<S, A> {
     for (const action of actionsToReplay) {
       this.takeAction(action)
     }
+  }
+
+  undo(): void {
+    this.rewindTo(this.actionHistory.length - 2)
+  }
+
+  copy(): typeof this {
+    const ThisClass = this.constructor as new (arg: GameFSMData<S, A>) => typeof this
+    return new ThisClass(this.toData())
   }
 
   addToDisplay(displayString: string): void {

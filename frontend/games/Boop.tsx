@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import _ from 'lodash'
+import { useState, useEffect, useRef } from 'react'
 
 import { BoopFSM, BoopAction } from '@shared/games/boop.ts'
 import boopCat0 from '../assets/boop_cat0.png'
@@ -6,6 +7,21 @@ import boopCat1 from '../assets/boop_cat1.png'
 import boopKitten0 from '../assets/boop_kitten0.png'
 import boopKitten1 from '../assets/boop_kitten1.png'
 import './Boop.css'
+
+interface SlidingPiece {
+  from: { row: number, col: number }
+  to: { row: number, col: number }
+  player: number
+  type: 'cat' | 'kitten'
+}
+
+interface FadingPiece {
+  row: number
+  col: number
+  player: number
+  type: 'cat' | 'kitten'
+  boopDirection: [number, number] | null
+}
 
 interface BoopProps {
   fsm: BoopFSM | null
@@ -19,6 +35,106 @@ function Boop({ fsm, takeAction, replayMode }: BoopProps) {
   const [selectedPieceType, setSelectedPieceType] = useState<'cat' | 'kitten' | null>(null)
   const [selectedAction, setSelectedAction] = useState<'remove' | 'graduate' | null>(null)
   const [selectedGraduationCells, setSelectedGraduationCells] = useState<{row: number, col: number}[]>([])
+  const [slidingPieces, setSlidingPieces] = useState<SlidingPiece[]>([])
+  const [fadingPieces, setFadingPieces] = useState<FadingPiece[]>([])
+  const prevFSMRef = useRef<BoopFSM | null>(fsm)
+
+  // Handle animations when FSM updates
+  useEffect(() => {
+    if (!fsm) return
+
+    let prevFSM = prevFSMRef.current
+    prevFSMRef.current = fsm
+    if (replayMode) {
+      prevFSM = fsm.copy()
+      prevFSM.undo()
+    }
+
+    if (prevFSM !== null && !_.isEqual(prevFSM.state, fsm.state)) {
+      const newSlidingPieces: SlidingPiece[] = []
+      const newFadingPieces: FadingPiece[] = []
+
+      const lastAction = fsm.actionHistory.at(-1)
+      if (lastAction === undefined) {
+        return
+      }
+      if (lastAction.type === 'place') {
+        // If the placed piece itself was graduated and removed, add a fade animation
+        if (!fsm.state.board[lastAction.row][lastAction.col].type) {
+            newFadingPieces.push({
+              row: lastAction.row,
+              col: lastAction.col,
+              player: lastAction.player,
+              type: lastAction.pieceType,
+              boopDirection: null,
+            })
+        }
+
+        // Calculate boop animations for any remaining pieces
+        const boopResults = BoopFSM.calculateBoops(
+          prevFSM.state.board,
+          lastAction.row,
+          lastAction.col,
+          { player: lastAction.player, type: lastAction.pieceType },
+        )
+
+        for (const { oldPosition, newPosition, boopDirection } of boopResults) {
+          const [oldRow, oldCol] = oldPosition
+          const piece = prevFSM.state.board[oldRow][oldCol]
+
+          const [newRow, newCol] = newPosition !== null ? newPosition : [0, 0]
+          if (newPosition === null || !fsm.state.board[newRow][newCol].type) {
+            // Piece was booped off-board or graduated, so add slide-and-fade animation
+            newFadingPieces.push({
+              row: oldRow,
+              col: oldCol,
+              player: piece.player!,
+              type: piece.type!,
+              boopDirection: boopDirection,
+            })
+          } else {
+            // Piece was booped to new position - add slide animation
+            newSlidingPieces.push({
+              from: { row: oldRow, col: oldCol },
+              to: { row: newRow, col: newCol },
+              player: piece.player!,
+              type: piece.type!,
+            })
+          }
+        }
+      }
+
+      // Handle any non-boop graduation + removal actions by just fading removed pieces
+      for (let row = 0; row < 6; row++) {
+        for (let col = 0; col < 6; col++) {
+          const prevCell = prevFSM.state.board[row][col]
+          const alreadyAnimating = (
+            newFadingPieces.some(p => p.row === row && p.col === col) ||
+            newSlidingPieces.some(p => p.from.row === row && p.from.col === col)
+          )
+          if (prevCell.type && !fsm.state.board[row][col].type && !alreadyAnimating) {
+            newFadingPieces.push({
+              row, col,
+              player: prevCell.player!,
+              type: prevCell.type,
+              boopDirection: null,
+            })
+          }
+        }
+      }
+
+      setSlidingPieces(newSlidingPieces)
+      setFadingPieces(newFadingPieces)
+
+      // Clear slidingPieces after they complete
+      const timeout = setTimeout(() => {
+        setSlidingPieces([])
+        setFadingPieces([])
+      }, 1000)
+
+      return () => clearTimeout(timeout)
+    }
+  }, [fsm, replayMode])
 
   const getBoardMode = (): BoardMode => {
     if (replayMode || !isCurrentPlayer || fsm?.state.winner !== null) {
@@ -127,7 +243,7 @@ function Boop({ fsm, takeAction, replayMode }: BoopProps) {
   }
 
   const getCellClass = (row: number, col: number) => {
-    const classes = ['cell']
+    const classes = ['boop-cell']
     const mode = getBoardMode()
     if (mode === 'place') {
       const hasOnlyOnePieceType = (
@@ -139,7 +255,7 @@ function Boop({ fsm, takeAction, replayMode }: BoopProps) {
         move.row === row &&
         move.col === col
       )) && (selectedPieceType || hasOnlyOnePieceType)) {
-        classes.push('cell-valid')
+        classes.push('boop-cell-valid')
       }
     } else if (mode === 'remove') {
       if (validMoves.some((move) => (
@@ -147,7 +263,7 @@ function Boop({ fsm, takeAction, replayMode }: BoopProps) {
         move.row === row &&
         move.col === col
       ))) {
-        classes.push('cell-valid')
+        classes.push('boop-cell-valid')
       }
     } else if (mode === 'graduate') {
       // Get all graduation actions that include this cell
@@ -159,10 +275,10 @@ function Boop({ fsm, takeAction, replayMode }: BoopProps) {
         ))
       ))
       if (graduationActions.length > 0) {
-        classes.push('cell-valid')
+        classes.push('boop-cell-valid')
       }
       if (selectedGraduationCells.some((cell) => cell.row === row && cell.col === col)) {
-        classes.push('cell-selected')
+        classes.push('boop-cell-selected')
       }
     }
     return classes.join(' ')
@@ -170,27 +286,65 @@ function Boop({ fsm, takeAction, replayMode }: BoopProps) {
 
   const renderPiece = (row: number, col: number) => {
     const cell = fsm.state.board[row][col]
-    if (!cell.type || cell.player === null) return null
+
+    // Check for fading or sliding-fading pieces
+    if (!cell.type || cell.player === null) {
+      const fadingPiece = fadingPieces.find(p => p.row === row && p.col === col)
+      if (fadingPiece) {
+        const pieceImage = {
+          cat: { 0: boopCat0, 1: boopCat1 },
+          kitten: { 0: boopKitten0, 1: boopKitten1 },
+        }[fadingPiece.type][fadingPiece.player as 0 | 1]
+
+        let animationClass = 'fading'
+        let style = {}
+        if (fadingPiece.boopDirection !== null) {
+          animationClass = 'sliding-fading'
+          const cellSize = 84
+          const endX = cellSize * fadingPiece.boopDirection[1]
+          const endY = cellSize * fadingPiece.boopDirection[0]
+          style = {
+            '--start-x': '0px',
+            '--start-y': '0px',
+            '--end-x': `${endX}px`,
+            '--end-y': `${endY}px`,
+          } as React.CSSProperties
+        }
+
+        return (
+          <div
+            className={`boop-piece boop-player-${fadingPiece.player} ${fadingPiece.type} boop-${animationClass}`}
+            style={style}
+          >
+            <img src={pieceImage} alt={fadingPiece.type} />
+          </div>
+        )
+      }
+      return null
+    }
+
+    const slidingPiece = slidingPieces.find((a) => a.to.row === row && a.to.col === col)
+    const style = slidingPiece ? {
+      '--start-x': `${(slidingPiece.from.col - col) * 84}px`,
+      '--start-y': `${(slidingPiece.from.row - row) * 84}px`,
+      '--end-x': '0px',
+      '--end-y': '0px',
+    } as React.CSSProperties : undefined
 
     const classes = [
-      'piece',
-      `player-${cell.player}`,
+      'boop-piece',
+      `boop-player-${cell.player}`,
       cell.type,
+      slidingPiece ? 'boop-sliding' : '',
     ]
 
     const pieceImage = {
-      cat: {
-        0: boopCat0,
-        1: boopCat1,
-      },
-      kitten: {
-        0: boopKitten0,
-        1: boopKitten1,
-      },
+      cat: { 0: boopCat0, 1: boopCat1 },
+      kitten: { 0: boopKitten0, 1: boopKitten1 },
     }[cell.type][cell.player]
 
     return (
-      <div className={classes.join(' ')}>
+      <div className={classes.join(' ')} style={style}>
         <img src={pieceImage} alt={cell.type} />
       </div>
     )
@@ -200,9 +354,9 @@ function Boop({ fsm, takeAction, replayMode }: BoopProps) {
     const pieces = fsm.state.playerPieces[player]
     const isCurrentPlayerPieces = player === fsm.state.currentPlayer
     return (
-      <div className={`player-pieces player-${player} ${isCurrentPlayerPieces ? 'current' : ''}`}>
+      <div className={`boop-player-pieces boop-player-${player} ${isCurrentPlayerPieces ? 'boop-current' : ''}`}>
         <div>{fsm.players[player].name}</div>
-        <div className="piece-type-counts">
+        <div className="boop-piece-type-counts">
           <div>Cats: {pieces.cats}</div>
           <div>Kittens: {pieces.kittens}</div>
         </div>
@@ -211,15 +365,15 @@ function Boop({ fsm, takeAction, replayMode }: BoopProps) {
   }
 
   return (
-    <div className="boop">
-      <div className="piece-count">
+    <div className="boop-game">
+      <div className="boop-piece-count">
         {renderPieceCount(0)}
         {renderPieceCount(1)}
       </div>
 
-      <div className="board">
+      <div className="boop-board">
         {fsm.state.board.map((row, rowIndex) => (
-          <div key={rowIndex} className="row">
+          <div key={rowIndex} className="boop-row">
             {row.map((_, colIndex) => (
               <button
                 key={`${rowIndex}-${colIndex}`}
@@ -239,13 +393,13 @@ function Boop({ fsm, takeAction, replayMode }: BoopProps) {
       </div>
 
       {fsm.state.winner !== null ? (
-        <div className="winner-message">
+        <div className="boop-winner-message">
           {`${fsm.players[fsm.state.winner].name} wins!`}
         </div>
       ) : !replayMode && isCurrentPlayer && (
         <>
           {!fsm.state.needsPieceRemoval && !fsm.state.pendingGraduations.length && (
-            <div className="piece-selection">
+            <div className="boop-piece-selection">
               {fsm.state.playerPieces[fsm.state.currentPlayer].cats === 0 ? (
                 <div>Place a Kitten ({fsm.state.playerPieces[fsm.state.currentPlayer].kittens} left)</div>
               ) : fsm.state.playerPieces[fsm.state.currentPlayer].kittens === 0 ? (
@@ -253,7 +407,7 @@ function Boop({ fsm, takeAction, replayMode }: BoopProps) {
               ) : (
                 <>
                   <div>Select piece type to place:</div>
-                  <div className="piece-buttons">
+                  <div className="boop-piece-buttons">
                     <button
                       onClick={() => setSelectedPieceType('cat')}
                       disabled={!fsm.state.playerPieces[fsm.state.currentPlayer].cats}
@@ -275,9 +429,9 @@ function Boop({ fsm, takeAction, replayMode }: BoopProps) {
           )}
 
           {fsm.state.needsPieceRemoval && fsm.state.pendingGraduations.length > 0 && (
-            <div className="piece-selection">
+            <div className="boop-piece-selection">
               <div>You have 8 pieces and three-in-a-row. Choose your action:</div>
-              <div className="piece-buttons">
+              <div className="boop-piece-buttons">
                 <button
                   onClick={() => setSelectedAction('remove')}
                   className={selectedAction === 'remove' ? 'selected' : ''}

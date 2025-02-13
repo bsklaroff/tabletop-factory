@@ -1,4 +1,4 @@
-.boop {
+.boop-game {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -6,7 +6,39 @@
   padding: 2rem;
 }
 
-.board {
+@keyframes piece-slide {
+  from {
+    transform: translate(var(--start-x), var(--start-y));
+  }
+  to {
+    transform: translate(var(--end-x), var(--end-y));
+  }
+}
+
+@keyframes piece-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.boop-piece.boop-sliding {
+  animation: piece-slide 0.4s ease-out forwards;
+}
+
+.boop-piece.boop-fading {
+  animation: piece-fade-out 0.4s ease-out forwards 0.4s;
+}
+
+.boop-piece.boop-sliding-fading {
+  animation:
+    piece-slide 0.4s ease-out forwards,
+    piece-fade-out 0.4s ease-out forwards 0.4s;
+}
+
+.boop-board {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -15,12 +47,12 @@
   border-radius: 8px;
 }
 
-.row {
+.boop-row {
   display: flex;
   gap: 4px;
 }
 
-.cell {
+.boop-cell {
   width: 80px;
   height: 80px;
   display: flex;
@@ -35,25 +67,24 @@
   position: relative;
 }
 
-.cell-valid:not(:disabled) {
+.boop-cell-valid:not(:disabled) {
   background: rgba(100, 108, 255, 0.2);
   cursor: pointer;
 }
 
-.cell-valid:not(:disabled):hover {
+.boop-cell-valid:not(:disabled):hover {
   background: rgba(100, 108, 255, 0.3);
 }
 
-.cell:disabled {
+.boop-cell:disabled {
   cursor: not-allowed;
-  opacity: 0.7;
 }
 
-.cell-selected {
+.boop-cell-selected {
   background: rgba(100, 108, 255, 0.7) !important;
 }
 
-.piece {
+.boop-piece {
   position: absolute;
   width: 60px;
   height: 60px;
@@ -61,21 +92,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 1s ease-in-out;
 }
 
-.controls {
+.boop-controls {
   display: flex;
   gap: 1rem;
   margin-bottom: 1rem;
 }
 
-.piece-count {
+.boop-piece-count {
   display: flex;
   gap: 2rem;
   margin-bottom: 1rem;
 }
 
-.player-pieces {
+.boop-player-pieces {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -86,31 +118,31 @@
   transition: all 0.2s;
 }
 
-.player-pieces.current {
+.boop-player-pieces.boop-current {
   background: rgba(100, 108, 255, 0.4);
   box-shadow: 0 0 8px 2px rgba(100, 108, 255, 0.6);
 }
 
-.player-pieces.player-0 {
+.boop-player-pieces.boop-player-0 {
   border: 2px solid #b8c5d8;
 }
 
-.player-pieces.player-1 {
+.boop-player-pieces.boop-player-1 {
   border: 2px solid #fbb519;
 }
 
-.piece-type-counts {
+.boop-piece-type-counts {
   display: flex;
   gap: 1rem;
 }
 
-.winner-message {
+.boop-winner-message {
   font-size: 1.5rem;
   font-weight: bold;
   color: #646cff;
 }
 
-.piece-selection {
+.boop-piece-selection {
   margin-top: 1rem;
   display: flex;
   flex-direction: column;
@@ -118,7 +150,7 @@
   gap: 0.5rem;
 }
 
-.piece-buttons {
+.boop-piece-buttons {
   display: flex;
   gap: 1rem;
 }
