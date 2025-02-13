@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch ./server.ts",
-    "prod": "tsx ./server.ts --prod",
+    "dev": "tsx watch ./src/server.ts",
+    "prod": "tsx ./src/server.ts --prod",
     "build": "tsc -b && vite build",
     "dkgen": "drizzle-kit generate",
     "dkmig": "drizzle-kit migrate",

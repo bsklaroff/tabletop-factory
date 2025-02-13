@@ -8,19 +8,18 @@ import { GameFSM, Player } from '@shared/game-fsm.ts'
 import { GameState, GameAction, GameInfo, allGameInfo } from '@shared/game-info.ts'
 
 // Import all game JSX elements into gameJSXMap
-interface GameJSXProps {
-  fsm: GameFSM<GameState, GameAction> | null
-  takeAction: (action: GameAction) => void
-  replayMode: boolean
+import TicTacToe from './games/TicTacToe.tsx'
+import Boop from './games/Boop.tsx'
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+const gameJSXMap = new Map<string, (...args: any[]) => JSX.Element | null>([
+  ['tic_tac_toe', TicTacToe],
+  ['boop', Boop],
+])
+const gameJSXKeys = Array.from(gameJSXMap.keys()).sort()
+const gameInfoKeys = Array.from(allGameInfo.keys()).sort()
+if (JSON.stringify(gameJSXKeys) !== JSON.stringify(gameInfoKeys)) {
+  throw new Error('Mismatch between gameJSXMap and allGameInfo keys')
 }
-const gameJSXMap = new Map<string, (p: GameJSXProps) => JSX.Element>()
-const gameInfoEntries = Array.from(allGameInfo.entries())
-await Promise.all(gameInfoEntries.map(async ([gameName, gameInfo]) => {
-  const jsxModule = await import(`./games/${gameInfo.jsxName}.tsx`) as {[k: string]: () => JSX.Element}
-  const jsxElement = jsxModule['default']
-  gameJSXMap.set(gameName, jsxElement)
-}))
-
 
 function Play() {
   const { roomId } = useParams()
