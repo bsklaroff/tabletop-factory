@@ -7,14 +7,16 @@ import ViteExpress from 'vite-express'
 
 import db from './db/engine.ts'
 import { roomTable, gameSessionTable } from './db/schema.ts'
-import { CreateRoomReq, CreateRoomRes } from './shared/api-types.ts'
+import { CreateRoomReq, CreateRoomRes, AddAIReq } from './shared/api-types.ts'
 import { setupSocketServer } from './socket-server.ts'
+import { setupAIClient } from './ai-client.ts'
 
 const args = parseArgs({ options: { prod: { type: 'boolean' } } })
 if (args.values.prod) {
   ViteExpress.config({ mode: 'production' })
 }
 
+const PORT = 4007
 const app = express()
 const server = createServer((req, res) => { void app(req, res) })
 const io = new Server(server, { connectionStateRecovery: {} })
@@ -41,9 +43,21 @@ app.post('/api/create_room', async (req, res) => {
   }
 })
 
-setupSocketServer(io)
+app.post('/api/add_ai', (req, res) => {
+  try {
+    const { roomId } = req.body as AddAIReq
+    const playerId = `AI_${crypto.randomUUID()}`
+    setupAIClient(PORT, roomId, playerId)
+    res.status(200)
+  } catch (error) {
+    console.error('Error adding AI:', error)
+    res.status(500).json({ error: 'Failed to add AI' })
+  }
+})
 
-server.listen(4007, '0.0.0.0', () => {
+setupSocketServer(io, PORT)
+
+server.listen(PORT, '0.0.0.0', () => {
   console.log('Server is listening...')
 })
 

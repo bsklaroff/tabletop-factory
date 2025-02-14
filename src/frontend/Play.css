@@ -94,32 +94,26 @@
   color: rgba(255, 255, 255, 0.9);
 }
 
-.start-game-button {
+.game-button {
   margin: 1rem 0;
   padding: 0.8em 1.6em;
   font-size: 1.1em;
 }
 
-.start-game-button:disabled {
+.game-button:disabled:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.game-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.start-game-button:disabled:hover {
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.new-game-button {
-  margin: 2rem 0;
-  padding: 0.8em 1.6em;
-  font-size: 1.1em;
-  background-color: #646cff;
-  border-color: #646cff;
-}
-
-.new-game-button:hover {
-  background-color: #747bff;
-  border-color: #747bff;
+.game-controls {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin: 1rem 0;
 }
 
 .game-status-message {

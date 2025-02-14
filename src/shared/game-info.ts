@@ -1,8 +1,6 @@
 import { Player, GameFSMData, GameFSM } from './game-fsm.ts'
 import { TicTacToeState, TicTacToeAction, TicTacToeFSM } from './games/tic-tac-toe.ts'
 import { BoopState, BoopAction, BoopFSM } from './games/boop.ts'
-import ticTacToeRules from './games/tic-tac-toe-rules.ts'
-import boopRules from './games/boop-rules.ts'
 
 export type GameState =
   | TicTacToeState
@@ -20,26 +18,29 @@ interface GameFSMType<S, A> {
 
 export interface GameInfo {
   name: string
-  rules: string
   displayName: string
   jsxName: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   FSMClass: GameFSMType<any, any>
+  rulesFile: string
+  fsmCodeFile: string
 }
 
 export const allGameInfo = new Map<string, GameInfo>([
   ['tic_tac_toe', {
     name: 'tic_tac_toe',
-    rules: ticTacToeRules,
     displayName: 'Tic-tac-toe',
     jsxName: 'TicTacToe',
     FSMClass: TicTacToeFSM,
+    rulesFile: 'tic-tac-toe-rules.txt',
+    fsmCodeFile: 'tic-tac-toe.ts',
   }],
   ['boop', {
     name: 'boop',
-    rules: boopRules,
     displayName: 'Boop',
     jsxName: 'Boop',
     FSMClass: BoopFSM,
+    rulesFile: 'boop-rules.txt',
+    fsmCodeFile: 'boop.ts',
   }],
 ])

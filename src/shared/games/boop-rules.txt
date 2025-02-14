@@ -1,4 +1,4 @@
-export default `Boop - Game Rules
+Boop - Game Rules
 
 Setup:
 - 2 players
@@ -14,10 +14,11 @@ Gameplay:
    - Booped pieces don't cause chain reactions
    - When two adjacent pieces are already in a line, a piece played into that line cannot push them
    - However, pieces in a line can still be booped from other directions
+3. After boops are calculated, rules for graduating kittens or winning (see below) are assessed for the current player
 
 Special Rules:
 - Cats can boop both Cats and Kittens
-- Kittens cannot boop Cats
+- Kittens can boop other Kittens, but cannot boop Cats
 - You always have exactly 8 pieces available to play
 
 Graduating Kittens:
@@ -36,4 +37,4 @@ Graduating Kittens:
 
 Winning:
 - Line up 3 Cats in a row OR
-- Have all 8 Cats on the board at once`
+- Have all 8 Cats on the board at once

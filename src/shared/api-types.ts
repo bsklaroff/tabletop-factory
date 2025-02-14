@@ -12,6 +12,10 @@ export interface CreateRoomRes {
   roomId: string
 }
 
+export interface AddAIReq {
+  roomId: string
+}
+
 
 // WebSocket types
 

@@ -6,12 +6,12 @@ brew install pnpm
 pnpm install
 ```
 
-Ensure you have `TF_DB_URL` set. Then, run the dev server (uses hot module reloading):
+Ensure you have `TF_DB_URL` and `TF_OPENROUTER_API_KEY` set. Then, run the dev server (uses hot module reloading):
 ```
 pnpm run dev
 ```
 
-To run the production server, first build the dist folder, then run the server:
+To run the production server, first build the `src/dist/` folder, then run the server:
 ```
 pnpm run build
 pnpm run prod

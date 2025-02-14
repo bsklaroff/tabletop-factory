@@ -3,7 +3,8 @@ import { JSX, useEffect, useState, useRef } from 'react'
 import { useParams } from 'react-router'
 import { io, Socket } from 'socket.io-client'
 
-import { RoomJoinData, GameSessionData } from '@shared/api-types.ts'
+import { RoomJoinData, GameSessionData, GameActionData, AddAIReq } from '@shared/api-types.ts'
+
 import { GameFSM, Player } from '@shared/game-fsm.ts'
 import { GameState, GameAction, GameInfo, allGameInfo } from '@shared/game-info.ts'
 
@@ -78,6 +79,19 @@ function Play() {
     }
   }, [roomId])
 
+  if (!roomId) return null
+
+  const addAIPlayer = async (roomId: string) => {
+    try {
+      await fetch('/api/add_ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId } as AddAIReq),
+      })
+    } catch (error) {
+      console.error('Error adding AI player:', error)
+    }
+  }
 
   let gameContent = null
   if (gameInfo) {
@@ -86,7 +100,7 @@ function Play() {
       socketRef.current?.emit('game:action', {
         roomId,
         gameAction: action,
-      })
+      } as GameActionData)
     }
     gameContent = <GameJSX fsm={gameFSM} takeAction={takeAction} replayMode={false} />
   }
@@ -112,18 +126,27 @@ function Play() {
         {players && gameInfo && !gameFSM && (
           <>
             <h2>{gameInfo.displayName}</h2>
-            <button
-            onClick={() => {
-              socketRef.current?.emit('game:start', {
-                roomId,
-                players: players.slice(0, gameInfo.FSMClass.maxPlayers),
-              })
-            }}
-            disabled={players.length < gameInfo.FSMClass.minPlayers}
-            className="start-game-button"
-          >
-            Start Game
-          </button>
+            <div className="game-controls">
+              <button
+                onClick={() => { void addAIPlayer(roomId) }}
+                disabled={players.length >= gameInfo.FSMClass.minPlayers}
+                className="game-button"
+              >
+                Add AI Player
+              </button>
+              <button
+                onClick={() => {
+                  socketRef.current?.emit('game:start', {
+                    roomId,
+                    players: players.slice(0, gameInfo.FSMClass.maxPlayers),
+                  })
+                }}
+                disabled={players.length < gameInfo.FSMClass.minPlayers}
+                className="game-button"
+              >
+                Start Game
+              </button>
+            </div>
           </>
         )}
         {gameContent}
@@ -146,7 +169,7 @@ function Play() {
                 players: newPlayers,
               })
             }}
-            className="new-game-button"
+            className="game-button"
           >
             New Game
           </button>

@@ -6,9 +6,10 @@ import { gameSessionTable, GameSession, getGameSessionData } from './db/schema.t
 import { RoomJoinData, GameStartData, GameActionData } from './shared/api-types.ts'
 import { Player } from './shared/game-fsm.ts'
 import { allGameInfo } from './shared/game-info.ts'
+import { setupAIClient } from './ai-client.ts'
 
 
-export function setupSocketServer(io: Server) {
+export function setupSocketServer(io: Server, port: number) {
   // activeSockets maps socketId -> playerId
   const activeSockets = new Map<string, string>()
   // activePlayers maps playerId -> Player info
@@ -23,18 +24,24 @@ export function setupSocketServer(io: Server) {
     socket.on('room:join', async ({ playerId, playerName, roomId }: RoomJoinData) => {
       await socket.join(roomId)
       currentRoomId = roomId
+      const gameSession = await getActiveGameSession(roomId)
 
       activeSockets.set(socket.id, playerId)
       activePlayers.set(playerId, { id: playerId, name: playerName })
       if (!activeRooms.has(roomId)) {
         activeRooms.set(roomId, new Set())
+        // Reconnect any AI players from an existing game
+        if (gameSession.gameFSMData !== null) {
+          const aiPlayers = gameSession.gameFSMData.players.filter(p => p.id.startsWith('AI_'))
+          aiPlayers.forEach(player => setupAIClient(port, roomId, player.id))
+        }
       }
+
       const roomPlayerIds = activeRooms.get(roomId)!
       roomPlayerIds.add(playerId)
 
       const roomPlayers = getRoomPlayers(activePlayers, roomPlayerIds)
       io.to(roomId).emit('players:state', roomPlayers)
-      const gameSession = await getActiveGameSession(roomId)
       io.to(roomId).emit('game:state', getGameSessionData(gameSession))
       console.log(`Player ${playerName} (${playerId}) joined room ${roomId}`)
     })
